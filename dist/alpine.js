@@ -302,6 +302,7 @@
     // Default values inspired by: https://material.io/design/motion/speed.html#duration
     const styleValues = {
       duration: modifierValue(modifiers, 'duration', 150),
+      delay: modifierValue(modifiers, 'delay', 0),
       origin: modifierValue(modifiers, 'origin', 'center'),
       first: {
         opacity: 0,
@@ -321,6 +322,7 @@
     const duration = settingBothSidesOfTransition ? modifierValue(modifiers, 'duration', 150) : modifierValue(modifiers, 'duration', 150) / 2;
     const styleValues = {
       duration: duration,
+      delay: modifierValue(modifiers, 'delay', 0),
       origin: modifierValue(modifiers, 'origin', 'center'),
       first: {
         opacity: 1,
@@ -348,8 +350,8 @@
       if (!isNumeric(rawValue)) return fallback;
     }
 
-    if (key === 'duration') {
-      // Support x-show.transition.duration.500ms && duration.500
+    if (key === 'duration' || key === 'delay') {
+      // Support x-show.transition duration & delay with/out 'ms'
       let match = rawValue.match(/([0-9]+)ms/);
       if (match) return match[1];
     }
@@ -391,6 +393,7 @@
         if (transitionScale) el.style.transformOrigin = styleValues.origin;
         el.style.transitionProperty = [transitionOpacity ? `opacity` : ``, transitionScale ? `transform` : ``].join(' ').trim();
         el.style.transitionDuration = `${styleValues.duration / 1000}s`;
+        if (styleValues.delay) el.style.transitionDelay = `${styleValues.delay / 1000}s`;
         el.style.transitionTimingFunction = `cubic-bezier(0.4, 0.0, 0.2, 1)`;
       },
 
@@ -413,6 +416,7 @@
         if (transitionScale) el.style.transformOrigin = transformOriginCache;
         el.style.transitionProperty = null;
         el.style.transitionDuration = null;
+        el.style.transitionDelay = null;
         el.style.transitionTimingFunction = null;
       }
 
@@ -516,18 +520,22 @@
     el.__x_transition.nextFrame = requestAnimationFrame(() => {
       // Note: Safari's transitionDuration property will list out comma separated transition durations
       // for every single transition property. Let's grab the first one and call it a day.
-      let duration = Number(getComputedStyle(el).transitionDuration.replace(/,.*/, '').replace('s', '')) * 1000;
+      const computedStyles = getComputedStyle(el);
+      let duration = extractTime(computedStyles.transitionDuration) + extractTime(computedStyles.transitionDelay);
 
       if (duration === 0) {
-        duration = Number(getComputedStyle(el).animationDuration.replace('s', '')) * 1000;
+        duration = extractTime(computedStyles.animationDuration) + extractTime(computedStyles.animationDelay);
       }
 
       stages.show();
       el.__x_transition.nextFrame = requestAnimationFrame(() => {
         stages.end();
-        setTimeout(el.__x_transition.finish, duration);
+        setTimeout(el.__x_transition.callback, duration * 1000);
       });
     });
+  }
+  function extractTime(property) {
+    return property ? Number(property.replace(/,.*/, '').replace('s', '')) : 0;
   }
   function isNumeric(subject) {
     return !Array.isArray(subject) && !isNaN(subject);
