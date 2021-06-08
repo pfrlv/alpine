@@ -6417,10 +6417,21 @@
 
       stages.show();
       el.__x_transition.nextFrame = requestAnimationFrame(function () {
+        var _this20 = this;
+
         _newArrowCheck(this, _this19);
 
         stages.end();
-        setTimeout(el.__x_transition.callback, duration * 1000);
+        setTimeout(function () {
+          _newArrowCheck(this, _this20);
+
+          stages.hide(); // Adding an "isConnected" check, in case the callback
+          // removed the element from the DOM.
+
+          if (el.isConnected) {
+            stages.cleanup();
+          }
+        }.bind(this), duration * 1000);
       }.bind(this));
     }.bind(this));
   }

@@ -530,7 +530,14 @@
       stages.show();
       el.__x_transition.nextFrame = requestAnimationFrame(() => {
         stages.end();
-        setTimeout(el.__x_transition.callback, duration * 1000);
+        setTimeout(() => {
+          stages.hide(); // Adding an "isConnected" check, in case the callback
+          // removed the element from the DOM.
+
+          if (el.isConnected) {
+            stages.cleanup();
+          }
+        }, duration * 1000);
       });
     });
   }
